@@ -36,18 +36,28 @@ All notable changes to SkillEvaluator are documented in this file.
 ### Fixed
 
 - Behavior checks no longer score a final answer that the evidence limits
-  shortened. The final-response allowance rises from 800 to 8,000 characters,
-  with the total behavior evidence budget reconciled to 12,000, so an ordinary
+  shortened. The final-response allowance rises from 800 to 8,000 characters
+  and the default behavior evidence budget from 8,000 to 12,000, so an ordinary
   answer reaches the judge whole instead of losing its middle; the user request
-  is reserved alongside it, ahead of the optional exploration output in the
-  compact tool history. The `behavior_check` evidence record now reports
-  whether the required evidence is complete, not only whether something was
-  dropped. When the final answer still cannot fit, the judge returns an
-  explicit evaluation error and no behavior score, rather than grading the
-  evidence loss as a behavior failure, and that missing score stays missing
-  instead of being averaged in as a zero.
+  keeps a reserved section of up to 2,000 characters ahead of the optional
+  exploration output in the compact tool history, which also repeats the
+  request at its head. The `behavior_check` evidence record now reports whether
+  the required evidence is complete, and which sections are incomplete, not
+  only whether something was dropped. When the final answer still cannot fit
+  and the deterministic verified facts do not already settle every expected
+  behavior, the judge returns an explicit evaluation error and no behavior
+  score, rather than grading the evidence loss as a behavior failure.
+  **That case then has no overall score at all**: an unscored metric that is
+  not "not applicable" leaves `overall_score` null, so such cases drop out of
+  any gate or comparison keyed on it until the limits are raised or the case is
+  shortened. A case whose expected behaviors are all confirmed by the verified
+  facts keeps its score, because the missing text cannot change the outcome.
   `SKILL_EVAL_BEHAVIOR_FINAL_RESPONSE_LIMIT` and
-  `SKILL_EVAL_BEHAVIOR_CHECK_BUDGET` still override both limits.
+  `SKILL_EVAL_BEHAVIOR_CHECK_BUDGET` are both honoured exactly as set, in
+  either direction. Note that the final-response limit also caps the reserved
+  user-request section when it is set below 2,000, and that a check budget too
+  small to hold the final response beside some tool history is logged as a
+  warning rather than quietly raised — lower the final-response limit with it.
 - A failed Tier 3 execution (for example a backend launch failure) now marks the
   report payload, its summary and the affected agents as failed with their
   errors, instead of only the top-level `result.json`. A report re-rendered by
